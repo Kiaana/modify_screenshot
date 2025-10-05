@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>截图时间编辑器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @font-face {
+            font-family: 'CustomFont';
+            src: url('ZhiyiSans-Bold.ttf') format('truetype');
+            font-weight: normal;
+            font-style: normal;
+        }
+        
+        .custom-font {
+            font-family: 'CustomFont', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen">
+    <div class="container mx-auto px-4 py-6 max-w-4xl">
+        <!-- 标题 -->
+        <div class="text-center mb-6">
+            <h1 class="text-3xl font-bold text-gray-800 mb-2">📸 截图时间编辑器</h1>
+            <p class="text-gray-600 text-sm">轻松修改截图中的时间信息</p>
+        </div>
+
+        <!-- 主卡片 -->
+        <div class="bg-white rounded-2xl shadow-xl p-6 mb-6">
+            <!-- 上传区域 -->
+            <div class="mb-6">
+                <label class="block text-sm font-semibold text-gray-700 mb-3">上传截图</label>
+                <div class="relative">
+                    <input type="file" id="imageInput" accept="image/*" class="hidden">
+                    <button onclick="document.getElementById('imageInput').click()" 
+                            class="w-full bg-gradient-to-r from-blue-500 to-indigo-600 text-white py-4 rounded-xl font-medium hover:from-blue-600 hover:to-indigo-700 transition-all duration-300 shadow-lg hover:shadow-xl">
+                        <span class="text-lg">📁 选择图片</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- 时间设置区域 -->
+            <div id="editSection" class="hidden space-y-6">
+                <!-- 状态栏时间 -->
+                <div class="bg-gradient-to-r from-purple-50 to-pink-50 p-4 rounded-xl">
+                    <label class="flex items-center text-sm font-semibold text-gray-700 mb-3">
+                        <span class="text-xl mr-2">🕐</span>
+                        状态栏时间
+                    </label>
+                    <input type="text" id="statusTime" placeholder="例如: 9:41" 
+                           class="w-full px-4 py-3 border-2 border-purple-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all">
+                </div>
+
+                <!-- 中间用时 -->
+                <div class="bg-gradient-to-r from-green-50 to-emerald-50 p-4 rounded-xl">
+                    <label class="flex items-center text-sm font-semibold text-gray-700 mb-3">
+                        <span class="text-xl mr-2">⏱️</span>
+                        屏幕中间用时
+                    </label>
+                    <input type="text" id="centerTime" placeholder="例如: 01:23:45 或 03:23" 
+                           class="w-full px-4 py-3 border-2 border-green-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all">
+                </div>
+
+                <!-- 应用按钮 -->
+                <button onclick="applyChanges()" 
+                        class="w-full bg-gradient-to-r from-green-500 to-teal-600 text-white py-4 rounded-xl font-semibold hover:from-green-600 hover:to-teal-700 transition-all duration-300 shadow-lg hover:shadow-xl text-lg">
+                    ✨ 应用修改
+                </button>
+            </div>
+        </div>
+
+        <!-- 预览区域 -->
+        <div id="previewSection" class="hidden bg-white rounded-2xl shadow-xl p-6">
+            <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+                <span class="text-2xl mr-2">👀</span>
+                预览
+            </h2>
+            <div class="relative">
+                <canvas id="canvas" class="w-full rounded-lg shadow-lg"></canvas>
+            </div>
+            <button onclick="downloadImage()" 
+                    class="w-full mt-4 bg-gradient-to-r from-orange-500 to-red-600 text-white py-4 rounded-xl font-semibold hover:from-orange-600 hover:to-red-700 transition-all duration-300 shadow-lg hover:shadow-xl text-lg">
+                💾 下载图片
+            </button>
+        </div>
+    </div>
+
+    <script>
+        let originalImage = null;
+        let canvas = document.getElementById('canvas');
+        let ctx = canvas.getContext('2d');
+
+        document.getElementById('imageInput').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    const img = new Image();
+                    img.onload = function() {
+                        originalImage = img;
+                        canvas.width = img.width;
+                        canvas.height = img.height;
+                        ctx.drawImage(img, 0, 0);
+                        
+                        document.getElementById('editSection').classList.remove('hidden');
+                        document.getElementById('previewSection').classList.remove('hidden');
+                    };
+                    img.src = event.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        function applyChanges() {
+            if (!originalImage) return;
+
+            ctx.drawImage(originalImage, 0, 0);
+
+            const statusTime = document.getElementById('statusTime').value;
+            const centerTime = document.getElementById('centerTime').value;
+
+            // 修改状态栏时间
+            if (statusTime) {
+                const statusPos = {
+                    x: canvas.width * 0.061,
+                    y: canvas.height * 0.0167
+                };
+                const fontSize = canvas.height * 0.014;
+                
+                // 覆盖原时间
+                ctx.fillStyle = getBackgroundColor(statusPos.x - 20, statusPos.y + 10);
+                ctx.fillRect(statusPos.x - 10, statusPos.y - 5, 95, fontSize + 10);
+                
+                /* 绘制新时间 */
+                ctx.fillStyle = '#000000';
+                ctx.font = `${fontSize}px CustomFont, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif`;
+                ctx.fillText(statusTime, statusPos.x, statusPos.y + fontSize);
+            }
+
+            // 修改中间用时
+            if (centerTime) {
+                const centerPos = {
+                    x: canvas.width * 0.722,
+                    y: canvas.height * 0.426
+                };
+                const fontSize = canvas.height * 0.0225;
+                
+                // 先设置字体，以便准确测量宽度
+                ctx.font = `${fontSize}px CustomFont, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif`;
+                const textMetrics = ctx.measureText(centerTime);
+                const textWidth = textMetrics.width;
+
+                // 覆盖原时间
+                // 稍微扩大覆盖范围以确保完全遮盖
+                const coverX = centerPos.x ;
+                const coverY = centerPos.y - fontSize - 5;
+                const coverWidth = textWidth + 15; // 增加宽度余量
+                const coverHeight = fontSize + 10;
+                
+                ctx.fillStyle = getBackgroundColor(centerPos.x - 50, centerPos.y - 50);
+                ctx.fillRect(coverX, coverY, coverWidth, coverHeight);
+                
+                // 绘制新时间
+                ctx.fillStyle = '#064906';
+                ctx.fillText(centerTime, centerPos.x, centerPos.y);
+            }
+        }
+
+        function getBackgroundColor(x, y) {
+            const pixel = ctx.getImageData(x, y, 1, 1).data;
+            return `rgb(${pixel[0]}, ${pixel[1]}, ${pixel[2]})`;
+        }
+
+        function downloadImage() {
+            const link = document.createElement('a');
+            link.download = 'modified_screenshot.png';
+            link.href = canvas.toDataURL();
+            link.click();
+        }
+    </script>
+</body>
+</html>
